@@ -2,10 +2,12 @@
   "name": "jester-backend",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "game-server.cjs",
   "scripts": {
-    "start": "node server.js"
+    "start": "node game-server.cjs",
+    "test": "node --test race-engine.test.cjs server.test.cjs gameplay.test.cjs"
   },
+  "engines": { "node": ">=22" },
   "keywords": [],
   "author": "",
   "license": "ISC",
