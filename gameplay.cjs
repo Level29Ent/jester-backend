@@ -2,6 +2,18 @@
 const {randomUUID}=require('node:crypto');
 const {RaceEngine:Base}=require('./race-engine.cjs');
 const {COURSES,coinPositions}=require('./tracks.cjs');
+const MOVEMENT=Object.freeze({groundAccel:65,groundBrake:85,airAccel:24,airBrake:2});
+function steer(p,input,speed,dt,airborne,courseSpeed){
+ const len=Math.max(1,Math.hypot(input.x||0,input.z||0));
+ const tx=(input.x||0)/len*speed,tz=(input.z||0)/len*speed;
+ // Keep existing dash and stun response; smooth ordinary steering only.
+ if(p.dashing||p.stun){p.vx=tx;p.vz=tz;return;}
+ const active=!!(input.x||input.z);
+ const rate=(airborne?(active?MOVEMENT.airAccel:MOVEMENT.airBrake):(active?MOVEMENT.groundAccel:MOVEMENT.groundBrake))*courseSpeed;
+ const dx=tx-p.vx,dz=tz-p.vz,distance=Math.hypot(dx,dz);
+ const blend=distance?Math.min(1,rate*dt/distance):0;
+ p.vx+=dx*blend;p.vz+=dz*blend;
+}
 class RewardQueue {
  constructor(sender){this.sender=sender;this.jobs=new Map();this.busy=false;}
  enqueue(room,p){
@@ -62,14 +74,13 @@ class EnhancedRaceEngine extends Base {
     p.stun=Math.max(0,p.stun-dt);p.boost=Math.max(0,p.boost-dt);p.cd=Math.max(0,p.cd-dt);p.dashing=Math.max(0,p.dashing-dt);
     if(m.buffer>0&&m.coyote>0&&!p.stun){p.vy=9;m.buffer=0;m.coyote=0;p.y=Math.max(.001,p.y);}
     if(input.dash&&!p.cd&&!p.stun){p.dashing=.25;p.cd=2.8;}
-    const len=Math.max(1,Math.hypot(input.x||0,input.z||0));
     const speed=(p.dashing?17:p.boost?10:7)*c.speed*(p.stun?.25:1);
-    p.vx=(input.x||0)/len*speed;p.vz=(input.z||0)/len*speed;
+    steer(p,input,speed,dt,!grounded||p.y>0,c.speed);
     p.x+=p.vx*dt;p.z+=p.vz*dt;p.vy-=22*dt;p.y+=p.vy*dt;
     const floor=floorAt(p.x,p.z);
     if(floor&&p.y<=0&&p.y>-1&&p.vy<=0){p.y=0;p.vy=0;}
     if(floor&&p.y===0)p.cp=Math.max(p.cp,c.checkpoints.filter(z=>p.z>=z).length);
-    if(p.y< -10){p.x=0;p.z=p.cp?c.checkpoints[p.cp-1]:0;p.y=0;p.vy=0;p.falls++;m.immune=1;}
+    if(p.y< -10){p.x=0;p.z=p.cp?c.checkpoints[p.cp-1]:0;p.y=0;p.vy=0;p.vx=0;p.vz=0;p.falls++;m.immune=1;m.coyote=0;m.buffer=0;}
     if(p.y<.6&&c.boosts.some(b=>Math.hypot(p.x-b.x,p.z-b.z)<1.1))p.boost=.9;
     if(p.y<1.4){
      if(c.bumpers.some(b=>Math.hypot(p.x-b.x,p.z-b.z)<1.2))this.hit(p,m);
