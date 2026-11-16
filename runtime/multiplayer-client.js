@@ -10,7 +10,7 @@ export async function createMultiplayerClient({auth,fetcher=fetch}={}){
   const health=response.ok?await response.json():null;
   if(health?.protocol!==NETWORK_PROTOCOL||health.raceLimit!==RACE_LIMIT||!Array.isArray(health.courses)||COURSE_IDS.some(id=>!health.courses.includes(id)))throw Error('The race server needs an update before this game can connect.');
   return {async request(action,data={}){
-    if(!['enter','sync','start','leave','rematch','rooms'].includes(action))throw Error('Unsupported online action.');
+    if(!['enter','sync','start','leave','rematch','rooms','vote'].includes(action))throw Error('Unsupported online action.');
     const {data:session,error}=await auth.getSession();
     if(error||!session.session?.access_token)throw Error('Sign in with your email before playing online.');
     const result=await fetcher(`${url.origin}/api/${action}`,{method:'POST',credentials:'omit',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.session.access_token}`},

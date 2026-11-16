@@ -1,3 +1,4 @@
+import {CUP_POINTS} from '../progression.js';
 import {randomBytes,createHash} from 'node:crypto';
 import {createServer} from 'node:http';
 import {performance} from 'node:perf_hooks';
@@ -16,7 +17,7 @@ const copy=value=>JSON.parse(JSON.stringify(value));
 export class MultiplayerEngine {
   constructor({now=()=>performance.now(),random=Math.random}={}){this.now=now;this.random=random;this.rooms=new Map();this.sessions=new Map();}
   view(room){const state=room.state||{course:room.course,phase:'waiting',round:room.round,time:0,count:0,players:room.members.map((u,i)=>({...u,bot:false,loadout:{...starterLoadout},upgrades:{speed:0,jump:0,dash:0,magnet:0},coinIds:[],x:0,y:1,z:-i,rank:0}))};
-    return copy({...state,protocol:PROTOCOL,network:true,code:room.code,kind:room.kind,host:room.host,humanCount:room.members.length,raceSize:room.raceSize||room.members.length,fillBots:false,autoStart:0,
+    return copy({...state,protocol:PROTOCOL,network:true,partyCup:room.championship?{round:room.cupRound,total:3,complete:room.cupRound===3&&state.phase==='results',standings:Object.entries(room.points).map(([id,points])=>({id,points,name:room.names[id]})).sort((a,b)=>b.points-a.points),votes:Object.fromEntries(room.votes)}:null,code:room.code,kind:room.kind,host:room.host,humanCount:room.members.length,raceSize:room.raceSize||room.members.length,fillBots:false,autoStart:0,
       players:state.players.map(p=>({...p,rewardStatus:'disabled'})),results:state.players.filter(p=>p.rank).sort((a,b)=>a.rank-b.rank)});}
   session(token,user){const s=this.sessions.get(token);if(!s||s.user!==user.id)throw fail('Race session expired. Rejoin from the playground.',401);s.seen=this.now();return s;}
   async enter(user,data){
@@ -31,7 +32,7 @@ export class MultiplayerEngine {
     if(!room){
       if(this.rooms.size>=100)throw fail('Race server is full.',503);
       let code;do{code=randomBytes(4).toString('hex').toUpperCase();}while(this.rooms.has(code));
-      room={code,kind:data.mode==='public'?'public':'private',course:randomCourse(null,this.random),round:1,members:[],host:user.id,inputs:new Map(),engine:null,state:null,clock:0};this.rooms.set(code,room);
+      room={code,kind:data.mode==='public'?'public':'private',course:randomCourse(null,this.random),round:1,members:[],host:user.id,inputs:new Map(),engine:null,state:null,clock:0,championship:data.mode==='create'&&data.championship===true,cupRound:1,points:{},names:{},votes:new Map(),scoredRound:0};this.rooms.set(code,room);
     }
     // Online uses neutral physics/cosmetics, not editable browser wallet claims.
     room.members.push({id:user.id,name:typeof data.name==='string'?data.name.replace(/[\u0000-\u001f\u007f]/g,'').trim().slice(0,18)||'Racer':'Racer',loadout:{...starterLoadout}});
@@ -59,18 +60,32 @@ export class MultiplayerEngine {
       r.inputs.set(user.id,{value:{...value,jump:(value.jump&&!previous?.heldJump)||previous?.value.jump||false,dash:(value.dash&&!previous?.heldDash)||previous?.value.dash||false},heldJump:value.jump,heldDash:value.dash,at:this.now()});
       return this.view(r);
     }
+    if(action==='vote'){
+      if(!r.championship||r.state&&r.state.phase!=='results'||r.cupRound>=3&&r.state?.phase==='results')throw fail('Voting is closed.');
+      if(!Object.hasOwn(COURSES,data.course))throw fail('Choose a valid course.');
+      r.votes.set(user.id,data.course);return this.view(r);
+    }
     if(action==='leave'){await this.leave(data.token);return {ok:true};}
     if(r.host!==user.id)throw fail('Only the host can start or rematch.',403);
-    if(action==='start'){if(r.state)throw fail('Race already started.');await this.begin(r);return this.view(r);}
+    if(action==='start'){if(r.state)throw fail('Race already started.');this.chooseCourse(r);await this.begin(r);return this.view(r);}
     if(action==='rematch'){
       if(r.state?.phase!=='results')throw fail('Wait for all racers or the race deadline before rematching.');
       if(r.members.length<2)throw fail('At least two real players are required.');
-      r.course=randomCourse(r.course,this.random);r.round++;await this.begin(r);return this.view(r);
+      if(r.championship&&r.cupRound>=3)throw fail('Championship complete. Create a new party for another cup.');
+      this.score(r);this.chooseCourse(r);r.round++;if(r.championship)r.cupRound++;await this.begin(r);return this.view(r);
     }
     throw fail('Unknown multiplayer action.',404);
   }
+  chooseCourse(r){
+    if(!r.championship){r.course=randomCourse(r.course,this.random);return;}
+    const counts=new Map();for(const course of r.votes.values())counts.set(course,(counts.get(course)||0)+1);
+    r.course=[...counts].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]))[0]?.[0]||randomCourse(r.course,this.random);r.votes.clear();
+  }
+  score(r){if(!r.championship||r.state?.phase!=='results'||r.scoredRound===r.round)return;
+    for(const p of r.state.players){r.points[p.id]=(r.points[p.id]||0)+(p.rank?CUP_POINTS[p.rank-1]||0:0);r.names[p.id]=p.name;}r.scoredRound=r.round;
+  }
   async leave(token){const s=this.sessions.get(token);if(!s)return;this.sessions.delete(token);const r=s.room;
-    r.members=r.members.filter(p=>p.id!==s.user);r.inputs.delete(s.user);
+    r.members=r.members.filter(p=>p.id!==s.user);r.inputs.delete(s.user);r.votes.delete(s.user);
     if(r.engine)r.state=await r.engine.request('network/remove',{id:s.user});
     if(r.host===s.user)r.host=r.members[0]?.id;
     if(!r.members.length)this.rooms.delete(r.code);
@@ -80,7 +95,7 @@ export class MultiplayerEngine {
     for(const r of this.rooms.values()){
       if(!r.engine||!r.state||r.starting||r.state.phase==='results')continue;
       for(const item of r.inputs.values())if(this.now()-item.at>300){item.value={};item.heldJump=item.heldDash=false;}
-      r.clock+=dt*1000;r.state=await r.engine.request('sync',{token:'local-practice'});r.state.round=r.round;
+      r.clock+=dt*1000;r.state=await r.engine.request('sync',{token:'local-practice'});r.state.round=r.round;this.score(r);
       // Input is held for axes only. Jump/dash are edge-triggered server events.
       for(const item of r.inputs.values()){item.value.jump=false;item.value.dash=false;}
     }
@@ -122,7 +137,7 @@ export function createMultiplayerServer({engine=new MultiplayerEngine(),authenti
     let rate=rates.get(ip);if(!rate||at-rate.at>=1000){rate={at,count:0};rates.set(ip,rate);}if(++rate.count>300)return send(429,{error:'Too many requests.'});
     const route=new URL(req.url,'http://localhost').pathname;
     if(req.method==='GET'&&['/','/health','/api/health'].includes(route))return send(200,{ok:true,protocol:PROTOCOL,courses:COURSE_IDS,raceLimit:RACE_LIMIT,persistence:false,rewards:false});
-    if(req.method!=='POST'||!/^\/api\/(enter|sync|start|leave|rematch|rooms)$/.test(route))return send(404,{error:'Endpoint not found.'});
+    if(req.method!=='POST'||!/^\/api\/(enter|sync|start|leave|rematch|rooms|vote)$/.test(route))return send(404,{error:'Endpoint not found.'});
     if(!(req.headers['content-type']||'').startsWith('application/json'))return send(415,{error:'Send JSON.'});
     try{
       let size=0,chunks=[];for await(const chunk of req){size+=chunk.length;if(size>8192)throw fail('Request too large.',413);chunks.push(chunk);}

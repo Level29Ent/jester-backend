@@ -65,3 +65,23 @@ The integration tests inject test identities; they do not prove real email
 verification, production CORS, or live cross-device play. Before announcing live
 multiplayer, test two distinct signed-in accounts on the deployed game through
 create/join/countdown/finish/rematch/leave/rejoin, and confirm solo saves unchanged.
+
+
+## Party championships and route update
+
+The current shared runtime uses protocol v2 and routes-v4. Private-room creators
+may opt into a three-round championship. Members vote for a course while waiting
+or between rounds; only the host starts/rematches. Highest vote count wins;
+course-ID ordering breaks ties, and no votes means random. Points are awarded
+once per completed round from server finish ranks; DNFs score zero. Round three
+shows final standings and rejects rematch. Votes disappear with departing members,
+and host transfer preserves existing points. Cups remain memory-only.
+
+The shared course catalog now includes marked edge-route speed pads and exact
+route-completion physics. Normal races remain capped at 60 seconds. Refresh the
+frontend and backend together: mismatched geometry/protocols deliberately reject
+connection. Online rewards remain disabled and cosmetic ownership is not imported.
+
+The game repository's separate weekly leaderboard API requires its Redis-backed
+API host; it is not served by this persistent race process. This backend update
+does not configure external services or claim live account/browser verification.
