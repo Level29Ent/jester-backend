@@ -44,12 +44,14 @@ export class MultiplayerEngine {
   async begin(room){
     if(room.members.length<2)throw fail('At least two real players are required.');
     if(room.starting)throw fail('Room is starting.');room.starting=true;
+    try{
     if(room.competition==='survival')room.course='sky';
     room.raceSize=room.members.length;room.clock=0;room.inputs.clear();
     room.engine=createPracticeClient({now:()=>room.clock,storage:{getItem(){},setItem(){}},random:this.random,
       network:{players:room.members,input:id=>room.inputs.get(id)?.value||{}}});
     await room.engine.request('configure',{autoRotate:false,standardized:true,runMode:room.competition||'race'});
-    const result=await room.engine.request('enter',{mode:'quick',course:room.course});room.state=result.room;room.state.round=room.round;room.starting=false;
+    const result=await room.engine.request('enter',{mode:'quick',course:room.course});room.state=result.room;room.state.round=room.round;
+    }finally{room.starting=false;}
   }
   async action(user,action,data={}){
     if(action==='enter')return this.enter(user,data);
@@ -62,6 +64,7 @@ export class MultiplayerEngine {
       r.inputs.set(user.id,{value:{...value,jump:(value.jump&&!previous?.heldJump)||previous?.value.jump||false,dash:(value.dash&&!previous?.heldDash)||previous?.value.dash||false},heldJump:value.jump,heldDash:value.dash,at:this.now()});
       return this.view(r);
     }
+    if(r.starting&&['start','rematch','vote'].includes(action))throw fail('Room is starting. Wait for the countdown.',409);
     if(action==='vote'){
       if(!r.championship||r.state&&r.state.phase!=='results'||r.cupRound>=3&&r.state?.phase==='results')throw fail('Voting is closed.');
       if(!Object.hasOwn(COURSES,data.course))throw fail('Choose a valid course.');

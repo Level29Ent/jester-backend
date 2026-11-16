@@ -134,3 +134,20 @@ These rounds do not pay wallet coins or server career XP. The game frontend's
 local career/title/course-map/cosmetic progression is not an online entitlement.
 Persistent rooms still need one shared-owner Node process and do not survive
 restarts. Deploy the exact matched frontend/runtime together before live tests.
+
+
+## Integration audit
+
+The audit-v8 shared runtime fixes concurrent host transitions: duplicate rematch
+packets can no longer advance round/cup counters twice before startup rejects
+one. Guards run before mutating course/votes/counters and flags clear in finally.
+The exported regression recreates overlapping rematches and verifies a single
+round advance and one score commit. Survival's bar collision is finite in both
+reach and height, matching the rendered sweeper instead of an infinite line.
+
+Fresh simulations expose raceId for frontend cache resets; room code and round
+still identify network transitions. Saved wallets/lifetime totals are unchanged,
+normal races remain 60s and no online payouts/durable rooms are enabled. Deploy
+this snapshot with the matching frontend. No external host or production settings
+are changed by this code. Live provider, real-account and physical-device checks
+remain separate from automated/injected-identity tests.

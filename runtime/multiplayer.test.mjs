@@ -123,3 +123,10 @@ test('held buttons do not auto-repeat and quick taps survive until simulation co
   await h.engine.action(a,'sync',{token:one.token,input:{jump:false}});
   await h.engine.action(a,'sync',{token:one.token,input:{jump:true}});assert.equal(inputs.get(a.id).value.jump,true);
 });
+
+test('duplicate host rematch packets cannot skip a round or consume two championship rounds',async()=>{
+ const h=harness(),one=await h.engine.action(a,'enter',{mode:'create',championship:true});await h.engine.action(b,'enter',{mode:'join',code:one.room.code});await h.engine.action(a,'start',{token:one.token});
+ const room=h.engine.sessions.get(one.token).room;room.state.phase='results';room.state.players.forEach((p,i)=>{p.rank=i+1;p.finishTime=40+i});h.engine.score(room);
+ const results=await Promise.allSettled([h.engine.action(a,'rematch',{token:one.token}),h.engine.action(a,'rematch',{token:one.token})]);
+ assert.equal(results.filter(r=>r.status==='fulfilled').length,1);assert.equal(room.round,2);assert.equal(room.cupRound,2);assert.equal(room.state.round,2);assert.equal(room.points[a.id],15);
+});
