@@ -1,7 +1,7 @@
 import {steerRacer} from './movement.js';
 import {TRACK_VERSION, ZERO_UPGRADES, CUP_POINTS, exportBackup, importBackup, dailyChallenge, dailyComplete, medalFor, recordKey, ghostAt, cupStandings} from './progression.js';
 import {SABOTAGE, normalizeSabotage, useSabotage, tickTraps} from './sabotage.js';
-import {applyCourseElement} from './course-elements.js';
+import {applyCourseElement,applyRhythmTrap} from './course-elements.js';
 import {normalizeAppearance} from './appearance.js';
 import {RIVALS} from './rivals.js';
 import {COURSES, RACE_LIMIT, COURSE_IDS, randomCourse, coinPositions, gaps, spinnerAngle, wallX} from './course.js';
@@ -201,6 +201,7 @@ export function createPracticeClient({storage, now = () => performance.now(), on
       });
       if (hit && !p.shield) { p.stun = .4; p.vx = (p.x >= 0 ? 1 : -1) * 6; p.vz = -4; p.vy = 5; p.event++; }
     }
+    applyRhythmTrap(room.course,p,room.time);
     if (c.boosts.some(o => Math.abs(p.x - o.x) < 1.5 && Math.abs(p.z - o.z) < 1.6 && p.y < 1.5)) p.boost = .8;
     if (ground() && p.y < 3) {
       c.checkpoints.forEach((z, i) => { if (p.z >= z) p.cp = Math.max(p.cp, i + 1); });
@@ -232,7 +233,7 @@ export function createPracticeClient({storage, now = () => performance.now(), on
         continue;
       }
       const player=room.players[0], oldCP=player.cp;
-      room.time += dt;
+      room.time = Math.min(room.training?600:RACE_LIMIT,room.time+dt);
       room.traps = room.traps.filter(t=>t.expires>room.time);
       room.players.forEach((p, index) => move(p, network ? network.input(p.id) : index ? botInput(p, index) : input, dt));
       if(room.phase==='racing'){

@@ -4,7 +4,7 @@ import {normalizeAppearance} from './appearance.js';
 import {normalizeSabotage} from './sabotage.js';
 
 // Bump whenever layout or movement changes invalidate personal/global times.
-export const TRACK_VERSION = 'smooth-v2';
+export const TRACK_VERSION = 'sprint-v3';
 export const ZERO_UPGRADES = Object.freeze({speed:0,jump:0,dash:0,magnet:0});
 export const CUP_POINTS = [15,12,10,8,7,6,5,4,3,2,1,0];
 export function validateProfile(p) {
@@ -35,7 +35,7 @@ export function dailyComplete(challenge,p) {return !!p.rank && (challenge.goal==
 export function medalFor(course,time) {
   if(!COURSES[course]||!Number.isFinite(time)||time<=0)return null;
   // Fixed, published targets: identical zero-upgrade/no-item rules for everyone.
-  return time<=95?'Gold':time<=110?'Silver':time<=120?'Bronze':null;
+  return time<=45?'Gold':time<=53?'Silver':time<=60?'Bronze':null;
 }
 export function recordKey(room,p) {return `${TRACK_VERSION}:${room.course}:${room.difficulty}:${Object.keys(ZERO_UPGRADES).map(k=>p.upgrades[k]).join('.')}`;}
 export function ghostAt(points,time) {
