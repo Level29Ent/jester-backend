@@ -1,3 +1,4 @@
+import {COMPETITIONS,competitionSetup,competitionTick,arenaInside,arenaSweep,eliminate,normalizedCareer,awardCareer,levelFor,TITLES,THEMES} from './competition.js';
 import {RIVAL_CHALLENGES,rivalBeaten,exportGhost,validateGhost} from './signature-features.js';
 import {signatureGround,tickSignature} from './signature-courses.js';
 import {recoverBot} from './race-polish.js';
@@ -77,6 +78,8 @@ export function createPracticeClient({storage, now = () => performance.now(), on
     }
   } catch {}
   function saveProgress(){try{storage?.setItem('jester-rush-progress-v2',JSON.stringify({...progress,version:TRACK_VERSION}));}catch{}}
+  let career=normalizedCareer(null);try{career=normalizedCareer(JSON.parse(storage?.getItem('jester-career')||'null'));}catch{}
+  const saveCareer=()=>{try{storage?.setItem('jester-career',JSON.stringify(career));}catch{}};
   let sharedGhost=null,lastGhost=null;
   let samples=[], splits=[], previousBest=null, cup=null, challenge=null, tutorial={move:false,jump:false,dash:false,checkpoint:false};
   const eligible = () => (options.runMode==='weekly'||options.runMode==='race' && options.difficulty==='standard' && !options.standardized);
@@ -105,6 +108,7 @@ export function createPracticeClient({storage, now = () => performance.now(), on
     room = {course, round, kind: 'practice', code: 'PRACTICE', host: id,
       humanCount: 1, phase: 'countdown', count: 3, time: 0,
       runMode:options.runMode,difficulty:options.difficulty,standardized:options.standardized,training:options.runMode==='training'||options.runMode==='tutorial',traps:[], sabotaged:false, perkNotice:"", players: network ? network.players.map((user,i)=>({...racer(i,color),id:user.id,name:user.name,bot:false,loadout:{...user.loadout},appearance:normalizeAppearance(user.appearance),upgrades:{...ZERO_UPGRADES}})) : Array.from({length: 12}, (_, i) => racer(i, color)), results: []};
+    if(COMPETITIONS.includes(options.runMode))competitionSetup(room,options.runMode);
     const player=room.players[0];
     room.practiceOnly=options.runMode==='ghost';room.rivalChallenge=options.runMode==='rival'?RIVAL_CHALLENGES.find(c=>c.id===options.rival):null;
     previousBest=progress.records[recordKey(room,player)]||null;
@@ -127,6 +131,8 @@ export function createPracticeClient({storage, now = () => performance.now(), on
       Promise.resolve(onRaceEnd(copy(trace))).catch(() => {});
     }
     if(room.training||room.practiceOnly) return;
+    career=awardCareer(career,room,player);saveCareer();room.earnedXP=player.rank?100+(player.rank===1?50:0):room.competition?25:0;
+    if(room.competition)return;
     if(room.rivalChallenge&&rivalBeaten(room,room.rivalChallenge))room.rivalWon=room.rivalChallenge.reward;
     if(player.rank&&!room.sabotaged&&options.standardized&&options.difficulty==='standard'){
       const finish=[player.finishTime,...[player.x,player.y,player.z].map(v=>Math.round(v*100)/100)];
@@ -157,6 +163,7 @@ export function createPracticeClient({storage, now = () => performance.now(), on
     save();
   }
   function botInput(p, index, dt) {
+    if(room.competition==='survival'){const angle=room.time*.45+index*2.399,target={x:Math.cos(angle)*2.5,z:16+Math.sin(angle)*2.5};return {x:clamp(target.x-p.x,-1,1),z:clamp(target.z-p.z,-1,1),jump:p.y<=1.05&&Math.sin(room.time*3+index)>.8,dash:false};}
     const recovery=recoverBot(p,dt,COURSES[room.course].width);if(recovery)return recovery;
     const gap = COURSE_GAPS[room.course].some(([edge, end]) => p.z > edge - 4 && p.z < end);
     const course = COURSES[room.course];
@@ -178,11 +185,11 @@ export function createPracticeClient({storage, now = () => performance.now(), on
       jump: jumpReady && (gap || hazard) && p.y < 1.05, dash: (gap || p.personality==='Aggressive'&&!hazard || options.difficulty==='expert' && !hazard) && p.cd === 0};
   }
   function move(p, input, dt) {
-    if (p.rank) return;
+    if (p.rank||p.eliminated) return;
     const c = COURSES[room.course];
     for (const key of ['cd', 'boost', 'dashing', 'stun', 'jumpBuffer', 'coyote', 'slow', 'jammed', 'jinxed', 'shield', 'turbo', 'magnetTime']) p[key] = Math.max(0, p[key] - dt);
-    const ground = () => signatureGround(c,p,room.time);
-    tickSignature(c,p,room.time,dt);
+    const ground = () => room.competition==='survival'?arenaInside(p,room.time):signatureGround(c,p,room.time);
+    if(room.competition!=='survival')tickSignature(c,p,room.time,dt);
     if (ground() && p.y <= 1.001 && p.vy <= 0) p.coyote = .1;
     if (input.jump && !p.jumpHeld) p.jumpBuffer = .15;
     if (p.jumpBuffer > 0 && p.coyote > 0) {
@@ -203,11 +210,12 @@ export function createPracticeClient({storage, now = () => performance.now(), on
     steerRacer(p,x,z,speed,dt);
     p.controlVx=p.stun?0:p.vx;p.controlVz=p.stun?0:p.vz;
     tickTraps(room,p);
-    applyCourseElement(room.course, p, dt, previousVelocity);
+    if(room.competition!=='survival')applyCourseElement(room.course,p,dt,previousVelocity);
     p.x += p.vx * dt; p.z += p.vz * dt;
     p.vy -= (c.gravity || 23) * dt; p.y += p.vy * dt;
     if (ground() && p.y <= 1 && p.y >= .5 && p.vy <= 0) { p.y = 1; p.vy = 0; }
-    if (p.stun === 0) {
+    if(room.competition==='survival'&&p.y<2&&p.stun===0){const a=arenaSweep(room.time),dx=p.x,dz=p.z-16,across=-dx*Math.sin(a)+dz*Math.cos(a);if(Math.abs(across)<.45){p.stun=.35;p.vx=dx>=0?6:-6;p.vz=dz>=0?6:-6;p.vy=4;p.event++;}}
+    if (p.stun === 0&&room.competition!=='survival') {
       let hit = c.bumpers.find(o => p.y < 2.6 && Math.hypot(p.x - o.x, p.z - o.z) < 1.3);
       hit ||= c.walls.find(o => p.y < 3.1 && Math.abs(p.z - o.z) < .9 && Math.abs(p.x - wallX(o, room.time)) < 1.8);
       hit ||= c.spinners.find(o => {
@@ -219,24 +227,25 @@ export function createPracticeClient({storage, now = () => performance.now(), on
       });
       if (hit && !p.shield) { p.stun = .4; p.vx = (p.x >= 0 ? 1 : -1) * 6; p.vz = -4; p.vy = 5; p.event++; }
     }
-    applyRhythmTrap(room.course,p,room.time);
-    for(const [i,route]of (c.routes||[]).entries()){
+    if(room.competition!=='survival')applyRhythmTrap(room.course,p,room.time);
+    for(const [i,route]of (room.competition==='survival'?[]:c.routes||[]).entries()){
       if(Math.abs(p.x-route.x)<route.halfWidth&&Math.abs(p.z-route.z)<route.halfLength&&p.y>=.9&&p.y<=1.05){p.boost=.9;p.activeRoute=i;}
       if(p.activeRoute===i&&p.z>=route.end&&ground()&&p.y<=1.1&&!p.routesTaken.includes(i)){p.routesTaken.push(i);p.activeRoute=null;}
     }
-    if (c.boosts.some(o => Math.abs(p.x - o.x) < 1.5 && Math.abs(p.z - o.z) < 1.6 && p.y < 1.5)) p.boost = .8;
-    if (ground() && p.y < 3) {
+    if (room.competition!=='survival'&&c.boosts.some(o => Math.abs(p.x - o.x) < 1.5 && Math.abs(p.z - o.z) < 1.6 && p.y < 1.5)) p.boost = .8;
+    if (room.competition!=='survival'&&ground() && p.y < 3) {
       c.checkpoints.forEach((z, i) => { if (p.z >= z) p.cp = Math.max(p.cp, i + 1); });
     }
-    for (const coin of COURSE_COINS[room.course]) {
+    for (const coin of room.competition==='survival'?[]:COURSE_COINS[room.course]) {
       if (!p.coinIds.includes(coin.id) && Math.hypot(p.x - coin.x, p.y - coin.y, p.z - coin.z) < 1.3 + p.upgrades.magnet * .3 + (p.magnetTime ? 3 : 0)) {
         p.coinIds.push(coin.id); p.raceCash += 5;
       }
     }
     if (p.y < -7) {
+      if(room.competition==='survival'){eliminate(room,p,'Fell out of the shrinking arena');return;}
       restartAfterFall(p, room.course);
     }
-    if (p.z >= c.finish && ground() && p.y >= .5) {
+    if (room.competition!=='survival'&&p.z >= c.finish && ground() && p.y >= .5) {
       room.finishCount=(room.finishCount||0)+1;p.rank=room.finishCount;
       p.finishTime = room.time; p.reward = p.rank === 1 ? 100 : 50;
       p.raceCash += p.reward; p.vx = p.vy = p.vz = 0;
@@ -258,6 +267,7 @@ export function createPracticeClient({storage, now = () => performance.now(), on
       room.time = Math.min(room.training?600:RACE_LIMIT,room.time+dt);
       room.traps = room.traps.filter(t=>t.expires>room.time);
       room.players.forEach((p, index) => move(p, network ? network.input(p.id) : index ? botInput(p, index, dt) : input, dt));
+      competitionTick(room);
       const order=[...room.players].sort((a,b)=>a.rank&&b.rank?a.rank-b.rank:a.rank?-1:b.rank?1:b.z-a.z);
       order.forEach((p,i)=>{p.bestPosition=Math.max(p.bestPosition||1,i+1);});
       if(room.phase==='racing'){
@@ -273,14 +283,14 @@ export function createPracticeClient({storage, now = () => performance.now(), on
         room.tutorial={...tutorial};
         if(options.runMode==='tutorial' && Object.values(tutorial).every(Boolean)){room.phase='results';room.tutorialComplete=true;}
       }
-      if ((!network && room.players[0].rank) || room.time >= (room.training?600:RACE_LIMIT) || room.players.every(p => p.rank)) {
+      if (room.phase==='results'||(!network && !room.competition && room.players[0].rank) || room.time >= (room.training?600:RACE_LIMIT) || room.players.every(p => p.rank)) {
         room.phase = 'results';
-        if (room.players[0].rank && !network && options.autoRotate && !room.training && options.runMode==='race' && nextAt === null) {
+        if (room.players[0].rank && !room.competition && !network && options.autoRotate && !room.training && options.runMode==='race' && nextAt === null) {
           nextAt = now() + 5000; queuedCourse = randomCourse(room.course, random);
         }
         room.results = room.players.filter(p => p.rank).sort((a, b) => a.rank - b.rank);
       }
-      if (room.players[0].rank || room.phase === 'results') bank();
+      if ((!room.competition&&room.players[0].rank) || room.phase === 'results') bank();
     }
     if (nextAt !== null) room.nextCourse = {course: queuedCourse, seconds: Math.max(0, (nextAt - now()) / 1000)};
     return room;
@@ -293,6 +303,12 @@ export function createPracticeClient({storage, now = () => performance.now(), on
         room.players=room.players.filter(p=>p.id!==data.id||p.rank);
         for(const p of room.players)if(p.id===data.id)p.disconnected=true;
         return copy(room);
+      case 'career':return copy({...career,level:levelFor(career.xp)});
+      case 'career/title':if(!TITLES.some(t=>t.name===data.title&&levelFor(career.xp)>=t.level))throw Error('Title locked.');career.title=data.title;saveCareer();return copy(career);
+      case 'career/theme':{
+        const theme=Object.hasOwn(THEMES,data.theme)?THEMES[data.theme]:null;if(!theme||levelFor(career.xp)<theme.level)throw Error('Theme locked.');
+        for(const slot of ['outfit','hat','shoes','pack']){if(!profile.owned.includes(theme[slot]))profile.owned.push(theme[slot]);profile.equipped[slot]=theme[slot];}save();return copy({profile});
+      }
       case 'ghost/export':
         if(!lastGhost)throw Error('Finish a Standard-difficulty standardized run without items first.');
         return {ghost:lastGhost};
@@ -326,14 +342,14 @@ export function createPracticeClient({storage, now = () => performance.now(), on
         if (data.mode !== 'quick') throw Error(ONLINE_MESSAGE);
         if(data.options)options={...options,...data.options};
         options.difficulty=['beginner','standard','expert'].includes(options.difficulty)?options.difficulty:'standard';
-        options.runMode=['race','training','tutorial','daily','cup','weekly','ghost','rival'].includes(options.runMode)?options.runMode:'race';
+        options.runMode=['race','training','tutorial','daily','cup','weekly','ghost','rival',...COMPETITIONS].includes(options.runMode)?options.runMode:'race';
         challenge=options.runMode==='daily'?dailyChallenge():null;
-        if(challenge||['weekly','ghost','rival'].includes(options.runMode))options.standardized=true;
-        if(['weekly','ghost','rival'].includes(options.runMode))options.difficulty='standard';
+        if(challenge||['weekly','ghost','rival',...COMPETITIONS].includes(options.runMode))options.standardized=true;
+        if(['weekly','ghost','rival',...COMPETITIONS].includes(options.runMode))options.difficulty='standard';
         if(options.runMode==='rival'&&!RIVAL_CHALLENGES.some(c=>c.id===options.rival))throw Error('Choose a rival challenge.');
         cup=options.runMode==='cup'?{courses:[],index:0,scores:{},names:{}}:null;
         if(cup){while(cup.courses.length<3){const id=COURSE_IDS[Math.floor(random()*COURSE_IDS.length)];if(!cup.courses.includes(id))cup.courses.push(id);else cup.courses.push(COURSE_IDS.find(k=>!cup.courses.includes(k)));}}
-        const course = (options.runMode==='ghost'?sharedGhost?.course:options.runMode==='rival'?RIVAL_CHALLENGES.find(c=>c.id===options.rival).course:null) ?? (options.runMode==='weekly'?weeklyChallenge().course:null) ?? challenge?.course ?? cup?.courses[0] ?? data.course ?? (['training','tutorial'].includes(options.runMode)?options.course:null) ?? randomCourse(lastCourse, random);
+        const course = (options.runMode==='survival'?'sky':null) ?? (options.runMode==='ghost'?sharedGhost?.course:options.runMode==='rival'?RIVAL_CHALLENGES.find(c=>c.id===options.rival).course:null) ?? (options.runMode==='weekly'?weeklyChallenge().course:null) ?? challenge?.course ?? cup?.courses[0] ?? data.course ?? (['training','tutorial'].includes(options.runMode)?options.course:null) ?? randomCourse(lastCourse, random);
         if (!Object.hasOwn(COURSES, course)) throw Error('Choose a valid course.');
         if (eligible() && onRaceStart) await onRaceStart({course, name: profile.name, upgrades: options.runMode==='weekly'?{...ZERO_UPGRADES}:{...profile.upgrades},weekly:options.runMode==='weekly'});
         return copy(start(course, clamp(Math.trunc(Number(data.color) || 0), 0, 3)));
@@ -347,12 +363,12 @@ export function createPracticeClient({storage, now = () => performance.now(), on
           return copy(start(course, raceColor, round).room);
         }
         return copy(tick(data.input || {}));
-      case 'leave': if(room?.phase==='results')bank(); else if(room && !room.training&&!room.practiceOnly){profile.cash+=room.players[0].raceCash;save();} room = null; nextAt = null; generation++; return {};
+      case 'leave': if(room?.phase==='results')bank(); else if(room && !room.training&&!room.practiceOnly&&!room.competition){profile.cash+=room.players[0].raceCash;save();} room = null; nextAt = null; generation++; return {};
       case 'rematch': {
         if (!room || room.phase !== 'results') throw Error('Wait for the race to finish.');
         if(cup && cup.index>=2)throw Error('Cup complete. Return to the playground for a new cup.');
         if(cup)cup.index++;
-        const course = options.runMode==='ghost'?sharedGhost.course:options.runMode==='weekly'?weeklyChallenge().course:cup?cup.courses[cup.index]:data.sameCourse||room.training||challenge||options.runMode==='rival'?room.course:randomCourse(room.course,random);
+        const course = options.runMode==='survival'?'sky':options.runMode==='ghost'?sharedGhost.course:options.runMode==='weekly'?weeklyChallenge().course:cup?cup.courses[cup.index]:data.sameCourse||room.training||challenge||options.runMode==='rival'?room.course:randomCourse(room.course,random);
         if (eligible() && onRaceStart) await onRaceStart({course, name: profile.name, upgrades: options.runMode==='weekly'?{...ZERO_UPGRADES}:{...profile.upgrades},weekly:options.runMode==='weekly'});
         return copy(start(course, Number(room.players[0].loadout.hat.split('-')[1]) % 4, room.round + 1).room);
       }
@@ -367,7 +383,7 @@ export function createPracticeClient({storage, now = () => performance.now(), on
       case 'sabotage/use': {
         if(!room||data.token!==token)throw Error('Start a practice race first.');
         if(!Object.hasOwn(SABOTAGE,data.perk)||!profile.sabotage[data.perk])throw Error('Buy a charge first.');
-        if(options.standardized || room.training)throw Error('Race items are disabled in training and standardized runs.');
+        if(options.standardized || room.training||room.competition)throw Error('Race items are disabled in training and standardized runs.');
         useSabotage(room,data.perk);
         profile.sabotage[data.perk]--;save();return copy({room,profile});
       }
