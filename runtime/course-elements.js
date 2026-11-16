@@ -1,3 +1,4 @@
+import {buildSignature} from './signature-courses.js';
 import {COURSES, COURSE_ELEMENTS, rhythmActive} from './course.js';
 export {COURSE_ELEMENTS} from './course.js';
 // Rendering and physics use the same finalized layout, including clearance.
@@ -33,6 +34,7 @@ export function buildCourseElements(view, course) {
   const elements = COURSE_ELEMENTS[course];
   if (!elements) return;
   view.rhythmLights=[];
+  buildSignature(view,COURSES[course]);
   for(const route of COURSES[course].routes||[]){
     view.mesh('round','#ffd53d',route.x,.18,-route.z,route.halfWidth*2,.12,route.halfLength*2);
     const sign=view.label('↗ RISK ROUTE · JUMP','#251936','#ffd53d',3.2);sign.position.set(route.x,3.6,-route.z);view.courseGroup.add(sign);

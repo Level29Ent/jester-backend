@@ -1,14 +1,16 @@
 {
   "repository": "Level29Ent/Jester-rush",
-  "commit": "b23b13286b30c8f37978d55f6b03a1c83ea2c53a",
+  "commit": "696e4f2fe3e92a8d3fca3edca7b2699e70f6f3af",
   "hashes": {
-    "replay-features.js": "3ccf186473d66681e9f467a2ae166ef2e69932646ddaba0cf676c52f9f9a1a2e",
+    "replay-features.js": "2fadb85710ae1351c1011266eda541b94e4f4c10665ffeae98b0de546d034ddf",
     "race-polish.js": "a7a3cd66ae008f2c973b3f37ed08e7aa78ab53b41191ca7e333250a67f144a94",
-    "practice.js": "884d9af57b661e0f9309772f635082ec9b94d9937ecb420078541dfad3c4bcf6",
+    "signature-features.js": "64d23420e30a289a7dee567a6cc696dd4778cb3ec19ba30e85c698d80c5e8780",
+    "practice.js": "8da3bfa76df611a72be1c36e3afe5d7f3d143c6dd6a988d1a8df892f536538b0",
     "movement.js": "dfa5a1a2eb8c1a23fc5e30ea010cdf3a566ab0715f06436fbdf2965931c09f9f",
-    "progression.js": "5e80430765534888e27aadb1a2bff060d36d8611ed53b1b7c99f501875517022",
-    "course.js": "1f8f5a79362e70a15f969bb6dc086774f5601eefb166d5870cc3a6400f5a889e",
-    "course-elements.js": "f754094760e4b76f668c4d60cbb91ce295d08db6a3b05ddc52e3f1ae1f794b84",
+    "progression.js": "94931b6d1b352130e0b8ddf930796742c579b1afc88f01efbc70973f21dc3854",
+    "course.js": "8de1ef5069fc5b65fc65d4fd13f412be9c0adb9c803ad4d670077837b63a8d20",
+    "signature-courses.js": "b7d21b9accc290ce685d28779289a772ce84c54de99dce9b8ee5411d18cd4415",
+    "course-elements.js": "067bee6f7ed001a2a03dfb1cc40a4635f940270f5ca0a3d842ebf3a28a477536",
     "catalog.js": "a6064c77333e42376b9b9d65b5bc3aa826b608a3632ab5e7d6d7c61815f98228",
     "appearance.js": "8fa3306d534bf5ab7adda55a673a2b7e55c1ae516f60b61c0f485f802ed7ac9d",
     "sabotage.js": "b2d8d98ebec6e9e377c2cad6dcd18dd9996c805d4bd3a3a5e692ebbb10354e06",
@@ -18,7 +20,7 @@
     "public-config.js": "f5a0750b93ebd01d95d9a4b3065f53e5f30bf7954b06a9933abae66a4872e88e",
     "multiplayer-client.js": "10aff41802bc5c39d601be8680d38af455cfbc0e8531422a333ee9c5addad684",
     "multiplayer.test.mjs": "64fc92c819986bd5f9753185c4091bcece59f3a3bc6fc81aa5653afb71f65f13",
-    "party.test.mjs": "9ae965c7f1cd3b16f859d82803686b65f8683b2270f7ddc0e500bef2115e257e",
+    "party.test.mjs": "cd0641c72bb5b89bda1944ef1672925af11b451c578afa9f7c5a78e00d277560",
     "api/multiplayer-config.js": "c671662275a1c8913a1ce9ec9ef3af05a0c405dd2322c788679209d0d6bce71c"
   }
 }
