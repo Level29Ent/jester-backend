@@ -33,3 +33,10 @@ export function awardCareer(career,room,p){if(room.network||room.training||room.
  if(!completed&&!playedCompetition)return career;
  return {...career,xp:Math.min(1000000,career.xp+(completed?100:25)+(p.rank===1?50:0)),completed:completed&&!playedCompetition?[...new Set([...career.completed,room.course])]:career.completed};
 }
+// Renderer uses a finite bar of half-length radius-.3, not an infinite line.
+export function arenaSweepHit(p,time){
+ if(p.y<.5||p.y>=2)return false;
+ const a=arenaSweep(time),dx=p.x,dz=p.z-16;
+ const along=dx*Math.cos(a)+dz*Math.sin(a),across=-dx*Math.sin(a)+dz*Math.cos(a);
+ return Math.abs(along)<=arenaRadius(time)-.3&&Math.abs(across)<.45;
+}

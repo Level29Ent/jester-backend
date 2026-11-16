@@ -1,4 +1,4 @@
-import {COMPETITIONS,competitionSetup,competitionTick,arenaInside,arenaSweep,eliminate,normalizedCareer,awardCareer,levelFor,TITLES,THEMES} from './competition.js';
+import {COMPETITIONS,competitionSetup,competitionTick,arenaInside,arenaSweepHit,eliminate,normalizedCareer,awardCareer,levelFor,TITLES,THEMES} from './competition.js';
 import {RIVAL_CHALLENGES,rivalBeaten,exportGhost,validateGhost} from './signature-features.js';
 import {signatureGround,tickSignature} from './signature-courses.js';
 import {recoverBot} from './race-polish.js';
@@ -105,7 +105,7 @@ export function createPracticeClient({storage, now = () => performance.now(), on
   function start(course, color = 0, round = 1) {
     if (!Object.hasOwn(COURSES, course)) throw Error('Choose a valid course.');
     generation++; samples=[]; splits=[]; tutorial={move:false,jump:false,dash:false,checkpoint:false}; raceColor = color; nextAt = null; queuedCourse = null; lastCourse = course;
-    room = {course, round, kind: 'practice', code: 'PRACTICE', host: id,
+    room = {course, round, raceId:generation, kind: 'practice', code: 'PRACTICE', host: id,
       humanCount: 1, phase: 'countdown', count: 3, time: 0,
       runMode:options.runMode,difficulty:options.difficulty,standardized:options.standardized,training:options.runMode==='training'||options.runMode==='tutorial',traps:[], sabotaged:false, perkNotice:"", players: network ? network.players.map((user,i)=>({...racer(i,color),id:user.id,name:user.name,bot:false,loadout:{...user.loadout},appearance:normalizeAppearance(user.appearance),upgrades:{...ZERO_UPGRADES}})) : Array.from({length: 12}, (_, i) => racer(i, color)), results: []};
     if(COMPETITIONS.includes(options.runMode))competitionSetup(room,options.runMode);
@@ -214,7 +214,7 @@ export function createPracticeClient({storage, now = () => performance.now(), on
     p.x += p.vx * dt; p.z += p.vz * dt;
     p.vy -= (c.gravity || 23) * dt; p.y += p.vy * dt;
     if (ground() && p.y <= 1 && p.y >= .5 && p.vy <= 0) { p.y = 1; p.vy = 0; }
-    if(room.competition==='survival'&&p.y<2&&p.stun===0){const a=arenaSweep(room.time),dx=p.x,dz=p.z-16,across=-dx*Math.sin(a)+dz*Math.cos(a);if(Math.abs(across)<.45){p.stun=.35;p.vx=dx>=0?6:-6;p.vz=dz>=0?6:-6;p.vy=4;p.event++;}}
+    if(room.competition==='survival'&&p.stun===0&&arenaSweepHit(p,room.time)){const dx=p.x,dz=p.z-16;p.stun=.35;p.vx=dx>=0?6:-6;p.vz=dz>=0?6:-6;p.vy=4;p.event++;}
     if (p.stun === 0&&room.competition!=='survival') {
       let hit = c.bumpers.find(o => p.y < 2.6 && Math.hypot(p.x - o.x, p.z - o.z) < 1.3);
       hit ||= c.walls.find(o => p.y < 3.1 && Math.abs(p.z - o.z) < .9 && Math.abs(p.x - wallX(o, room.time)) < 1.8);

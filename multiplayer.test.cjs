@@ -8,7 +8,7 @@ test('deployed entry serves the current shared protocol and all 23 courses',asyn
  const {server}=await createEnhancedServer({autoTick:false,allowedOrigins:['https://game.test']});
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
  try{const r=await fetch('http://127.0.0.1:'+server.address().port+'/api/health',{headers:{Origin:'https://game.test'}});const health=await r.json();
- assert.equal(r.status,200);assert.match(health.protocol,/jester-network-3:competition-v7:/);assert.equal(health.courses.length,23);assert.equal(health.raceLimit,60);assert.equal(health.rewards,false);
+ assert.equal(r.status,200);assert.match(health.protocol,/jester-network-3:audit-v8:/);assert.equal(health.courses.length,23);assert.equal(health.raceLimit,60);assert.equal(health.rewards,false);
  }finally{server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
 });
 test('exported source hashes exactly match the frontend runtime snapshot',()=>{
