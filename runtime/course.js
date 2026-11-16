@@ -207,3 +207,9 @@ for(const [id,c] of Object.entries(COURSES)){
   c.rhythmTraps=c.segments.filter((_,i)=>i%3===1).map(([a,b],i)=>({type:i%2?'rumble':'pulse',x:(i%2?1:-1)*(c.width-2),z:(a+b)/2,halfWidth:1.2,halfLength:1.7,phase:i*.7})).filter(o=>!c.spinners.some(s=>Math.hypot(o.x,o.z-s.z)<c.width+2)&&!c.walls.some(w=>Math.abs(o.z-w.z)<3)&&!c.bumpers.some(b=>Math.hypot(o.x-b.x,o.z-b.z)<3)&&!COURSE_ELEMENTS[id].zones.some(z=>Math.abs(o.x-z.x)<z.halfWidth+o.halfWidth&&Math.abs(o.z-z.z)<z.halfLength+o.halfLength));
 }
 export function rhythmActive(trap,time){return trap.type==='rumble'||Math.sin(time*3+trap.phase)>0;}
+
+// A narrow alternate lane before selected gaps offers speed in exchange for
+// needing an edge jump. Center track remains the safe route, never a teleport.
+for(const c of Object.values(COURSES)){
+ c.routes=c.segments.slice(0,-1).flatMap(([a,b],i)=>i%3===0?[{x:(i%2?1:-1)*(c.width-1.4),z:b-3.2,end:c.segments[i+1][0]+2,halfWidth:.8,halfLength:1.2}]:[]);
+}

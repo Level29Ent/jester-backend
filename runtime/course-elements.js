@@ -33,6 +33,10 @@ export function buildCourseElements(view, course) {
   const elements = COURSE_ELEMENTS[course];
   if (!elements) return;
   view.rhythmLights=[];
+  for(const route of COURSES[course].routes||[]){
+    view.mesh('round','#ffd53d',route.x,.18,-route.z,route.halfWidth*2,.12,route.halfLength*2);
+    const sign=view.label('↗ RISK ROUTE · JUMP','#251936','#ffd53d',3.2);sign.position.set(route.x,3.6,-route.z);view.courseGroup.add(sign);
+  }
   buildCourseScenery(view, course);
   for(const trap of COURSES[course].rhythmTraps||[]){
     const color=trap.type==='pulse'?'#ee5367':'#ed9c35';
@@ -57,7 +61,7 @@ export function buildCourseElements(view, course) {
       if (o.type === 'spring') view.mesh('round', '#fff3ca', o.x + offset * .8, .14, -o.z + .65, .5, .06, .15);
     }
     buildSurfaceTrap(view, o);
-    const sign = view.label(o.type === 'ice' ? 'ICE · TURN EARLY' : o.type === 'slime' ? 'STICKY · JUMP!' : o.type === 'wind' ? 'WIND TRAP' : o.type === 'spring' ? 'BOUNCE!' : o.force > 0 ? 'FAST BELT' : 'REVERSE BELT', '#251936', color, 2.8);
+    const sign = view.label(o.type === 'ice' ? '◇ ICE · TURN EARLY' : o.type === 'slime' ? '≈ STICKY · JUMP!' : o.type === 'wind' ? '≋ WIND TRAP' : o.type === 'spring' ? '↑ BOUNCE!' : o.force > 0 ? '↑ FAST BELT' : '↓ REVERSE BELT', '#251936', color, 2.8);
     sign.position.set(o.x, 3.7, -o.z);
     view.courseGroup.add(sign);
   }

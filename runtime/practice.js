@@ -1,3 +1,4 @@
+import {PERSONALITIES,weeklyChallenge} from './replay-features.js';
 import {steerRacer} from './movement.js';
 import {TRACK_VERSION, ZERO_UPGRADES, CUP_POINTS, exportBackup, importBackup, dailyChallenge, dailyComplete, medalFor, recordKey, ghostAt, cupStandings} from './progression.js';
 import {SABOTAGE, normalizeSabotage, useSabotage, tickTraps} from './sabotage.js';
@@ -24,6 +25,7 @@ export function restartAfterFall(p, course) {
   p.vx = p.vy = p.vz = p.cd = p.boost = p.dashing = 0;
   p.jumpBuffer = p.coyote = 0;
   p.controlVx=p.controlVz=0;
+  p.activeRoute=null;
   p.falls++; p.event++; p.stun = .15;
   // Keep coinIds: restarting must not allow farming the same pickups twice.
 }
@@ -73,7 +75,7 @@ export function createPracticeClient({storage, now = () => performance.now(), on
   } catch {}
   function saveProgress(){try{storage?.setItem('jester-rush-progress-v2',JSON.stringify({...progress,version:TRACK_VERSION}));}catch{}}
   let samples=[], splits=[], previousBest=null, cup=null, challenge=null, tutorial={move:false,jump:false,dash:false,checkpoint:false};
-  const eligible = () => options.runMode==='race' && options.difficulty==='standard' && !options.standardized;
+  const eligible = () => (options.runMode==='weekly'||options.runMode==='race' && options.difficulty==='standard' && !options.standardized);
   let room = null, lastTick = now(), settled = false, trace = [], nextAt = null, raceColor = 0, generation = 0, queuedCourse = null, lastCourse = null;
   const id = 'practice-you', token = 'local-practice';
 
@@ -85,8 +87,8 @@ export function createPracticeClient({storage, now = () => performance.now(), on
       if (loadout.hat === 'hat-0') loadout.hat = `hat-${color}`;
     }
     return {
-      id: bot ? `practice-bot-${index}` : id, name: bot ? `Bot: ${RIVALS[index - 1].name}` : profile.name,
-      bot, loadout, appearance: bot ? normalizeAppearance() : {...profile.appearance}, upgrades: bot || options.standardized ? {...ZERO_UPGRADES} : {...profile.upgrades},
+      id: bot ? `practice-bot-${index}` : id, name: bot ? `Bot: ${RIVALS[index - 1].name} · ${PERSONALITIES[(index-1)%3]}` : profile.name,
+      personality:bot?PERSONALITIES[(index-1)%3]:null,routesTaken:[],bestPosition:1,bot, loadout, appearance: bot ? normalizeAppearance() : {...profile.appearance}, upgrades: bot || options.standardized ? {...ZERO_UPGRADES} : {...profile.upgrades},
       x: ((index % 4) - 1.5) * 2, y: 1, z: -Math.floor(index / 4) * 1.8,
       vx: 0, vy: 0, vz: 0, cd: 0, boost: 0, dashing: 0, stun: 0, event: 0,
       cp: 0, falls: 0, raceCash: 0, coinIds: [], rank: 0, finishTime: 0, reward: 0, lostCoins: 0,
@@ -155,10 +157,13 @@ export function createPracticeClient({storage, now = () => performance.now(), on
       if(obstacle)lane=clamp(obstacle.x+(obstacle.x>0?-3:3),-course.width+1,course.width-1);
       const pad=course.boosts.find(o=>o.z>p.z&&o.z-p.z<12);if(pad)lane=pad.x;
     }
+    const route=course.routes?.find(r=>p.z>r.z-10&&p.z<r.end);
+    if(p.personality==='Shortcut specialist'&&route)lane=route.x;
+    if(p.personality==='Cautious')lane=0;
     const hesitation=options.difficulty==='beginner' && Math.sin(room.time*1.2+index)>.75;
     const jumpReady=options.difficulty==='beginner'?Math.sin(room.time*3+index)>.1:true;
     return {x: clamp((lane - p.x) * .7, -1, 1), z: hesitation?0:options.difficulty==='expert'?1:.83 + index % 3 * .06,
-      jump: jumpReady && (gap || hazard) && p.y < 1.05, dash: (gap || options.difficulty==='expert' && !hazard) && p.cd === 0};
+      jump: jumpReady && (gap || hazard) && p.y < 1.05, dash: (gap || p.personality==='Aggressive'&&!hazard || options.difficulty==='expert' && !hazard) && p.cd === 0};
   }
   function move(p, input, dt) {
     if (p.rank) return;
@@ -202,6 +207,10 @@ export function createPracticeClient({storage, now = () => performance.now(), on
       if (hit && !p.shield) { p.stun = .4; p.vx = (p.x >= 0 ? 1 : -1) * 6; p.vz = -4; p.vy = 5; p.event++; }
     }
     applyRhythmTrap(room.course,p,room.time);
+    for(const [i,route]of (c.routes||[]).entries()){
+      if(Math.abs(p.x-route.x)<route.halfWidth&&Math.abs(p.z-route.z)<route.halfLength&&p.y>=.9&&p.y<=1.05){p.boost=.9;p.activeRoute=i;}
+      if(p.activeRoute===i&&p.z>=route.end&&ground()&&p.y<=1.1&&!p.routesTaken.includes(i)){p.routesTaken.push(i);p.activeRoute=null;}
+    }
     if (c.boosts.some(o => Math.abs(p.x - o.x) < 1.5 && Math.abs(p.z - o.z) < 1.6 && p.y < 1.5)) p.boost = .8;
     if (ground() && p.y < 3) {
       c.checkpoints.forEach((z, i) => { if (p.z >= z) p.cp = Math.max(p.cp, i + 1); });
@@ -236,6 +245,8 @@ export function createPracticeClient({storage, now = () => performance.now(), on
       room.time = Math.min(room.training?600:RACE_LIMIT,room.time+dt);
       room.traps = room.traps.filter(t=>t.expires>room.time);
       room.players.forEach((p, index) => move(p, network ? network.input(p.id) : index ? botInput(p, index) : input, dt));
+      const order=[...room.players].sort((a,b)=>a.rank&&b.rank?a.rank-b.rank:a.rank?-1:b.rank?1:b.z-a.z);
+      order.forEach((p,i)=>{p.bestPosition=Math.max(p.bestPosition||1,i+1);});
       if(room.phase==='racing'){
         if(!samples.length||room.time-samples.at(-1)[0]>=.1)samples.push([room.time,...[player.x,player.y,player.z].map(n=>Math.round(n*100)/100)]);
         if(player.cp>oldCP)splits[player.cp-1]=room.time;
@@ -243,6 +254,7 @@ export function createPracticeClient({storage, now = () => performance.now(), on
         room.ghost=ghostAt(previousBest?.samples,room.time);
         room.bestTime=previousBest?.time||null;
         room.splitDelta=oldSplit&&splits[player.cp-1]?splits[player.cp-1]-oldSplit:null;
+        if(Number.isFinite(room.splitDelta))room.bestSplitDelta=Math.min(room.bestSplitDelta??Infinity,room.splitDelta);
         tutorial.move ||= player.z>3; tutorial.jump ||= !!input.jump && player.y>1.1; tutorial.dash ||= !!player.dashing; tutorial.checkpoint ||= player.cp>0;
         room.tutorial={...tutorial};
         if(options.runMode==='tutorial' && Object.values(tutorial).every(Boolean)){room.phase='results';room.tutorialComplete=true;}
@@ -290,14 +302,15 @@ export function createPracticeClient({storage, now = () => performance.now(), on
         if (data.mode !== 'quick') throw Error(ONLINE_MESSAGE);
         if(data.options)options={...options,...data.options};
         options.difficulty=['beginner','standard','expert'].includes(options.difficulty)?options.difficulty:'standard';
-        options.runMode=['race','training','tutorial','daily','cup'].includes(options.runMode)?options.runMode:'race';
+        options.runMode=['race','training','tutorial','daily','cup','weekly'].includes(options.runMode)?options.runMode:'race';
         challenge=options.runMode==='daily'?dailyChallenge():null;
-        if(challenge)options.standardized=true;
+        if(challenge||options.runMode==='weekly')options.standardized=true;
+        if(options.runMode==='weekly')options.difficulty='standard';
         cup=options.runMode==='cup'?{courses:[],index:0,scores:{},names:{}}:null;
         if(cup){while(cup.courses.length<3){const id=COURSE_IDS[Math.floor(random()*COURSE_IDS.length)];if(!cup.courses.includes(id))cup.courses.push(id);else cup.courses.push(COURSE_IDS.find(k=>!cup.courses.includes(k)));}}
-        const course = challenge?.course ?? cup?.courses[0] ?? data.course ?? (['training','tutorial'].includes(options.runMode)?options.course:null) ?? randomCourse(lastCourse, random);
+        const course = (options.runMode==='weekly'?weeklyChallenge().course:null) ?? challenge?.course ?? cup?.courses[0] ?? data.course ?? (['training','tutorial'].includes(options.runMode)?options.course:null) ?? randomCourse(lastCourse, random);
         if (!Object.hasOwn(COURSES, course)) throw Error('Choose a valid course.');
-        if (eligible() && onRaceStart) await onRaceStart({course, name: profile.name, upgrades: {...profile.upgrades}});
+        if (eligible() && onRaceStart) await onRaceStart({course, name: profile.name, upgrades: options.runMode==='weekly'?{...ZERO_UPGRADES}:{...profile.upgrades},weekly:options.runMode==='weekly'});
         return copy(start(course, clamp(Math.trunc(Number(data.color) || 0), 0, 3)));
       }
       case 'sync':
@@ -314,8 +327,8 @@ export function createPracticeClient({storage, now = () => performance.now(), on
         if (!room || room.phase !== 'results') throw Error('Wait for the race to finish.');
         if(cup && cup.index>=2)throw Error('Cup complete. Return to the playground for a new cup.');
         if(cup)cup.index++;
-        const course = cup?cup.courses[cup.index]:data.sameCourse||room.training||challenge?room.course:randomCourse(room.course,random);
-        if (eligible() && onRaceStart) await onRaceStart({course, name: profile.name, upgrades: {...profile.upgrades}});
+        const course = options.runMode==='weekly'?weeklyChallenge().course:cup?cup.courses[cup.index]:data.sameCourse||room.training||challenge?room.course:randomCourse(room.course,random);
+        if (eligible() && onRaceStart) await onRaceStart({course, name: profile.name, upgrades: options.runMode==='weekly'?{...ZERO_UPGRADES}:{...profile.upgrades},weekly:options.runMode==='weekly'});
         return copy(start(course, Number(room.players[0].loadout.hat.split('-')[1]) % 4, room.round + 1).room);
       }
       case 'profile/sabotage-buy': {

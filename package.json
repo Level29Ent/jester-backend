@@ -5,7 +5,7 @@
   "main": "game-server.cjs",
   "scripts": {
     "start": "node game-server.cjs",
-    "test": "node --test multiplayer.test.cjs runtime/multiplayer.test.mjs race-engine.test.cjs server.test.cjs gameplay.test.cjs"
+    "test": "node --test multiplayer.test.cjs runtime/multiplayer.test.mjs runtime/party.test.mjs race-engine.test.cjs server.test.cjs gameplay.test.cjs"
   },
   "engines": { "node": ">=22" },
   "keywords": [],
