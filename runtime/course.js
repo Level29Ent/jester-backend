@@ -109,16 +109,13 @@ for (const [id, [title, tip, scenery, pattern]] of Object.entries(CHALLENGES)) {
   c.elements = {title, tip, zones};
 }
 
-// Approximately 90 seconds of active traversal at normal running speed, plus
-// obstacle/gap recovery. A 120-second deadline leaves room for mistakes.
-export const RACE_LIMIT = 120;
-export const TARGET_RACE_SECONDS = 90;
-// Calibrated with the shared engine's unupgraded jump/dash traversal driver.
-// Fast belts, low gravity and dense sweepers need different distances.
-// Storm uses five sections with smoothed steering to retain the ~90s budget.
-const RACE_SECTIONS = {sky:5,sunset:5,carnival:4,mint:7,lava:5,frost:8,
-  royal:6,neon:7,desert:6,ocean:5,candy:8,storm:5,jungle:8,solar:5,
-  moon:8,coral:6,copper:7,cloud:5,prism:6,champion:5};
+// Short courses target ~48 seconds, with a strict 60-second racing deadline.
+// The three-second countdown is separate; finish earlier through skill.
+export const RACE_LIMIT = 60;
+export const TARGET_RACE_SECONDS = 48;
+const RACE_SECTIONS = {sky:3,sunset:3,carnival:2,mint:4,lava:3,frost:4,
+ royal:3,neon:4,desert:3,ocean:3,candy:4,storm:3,jungle:4,solar:3,
+ moon:4,coral:3,copper:4,cloud:3,prism:3,champion:3};
 for (const [id, c] of Object.entries(COURSES)) {
   const span = c.segments.at(-1)[1] + 12;
   const laps = RACE_SECTIONS[id];
@@ -204,3 +201,9 @@ export function gaps(course){const s=COURSES[course].segments;return s.slice(0,-
 export function coinPositions(course){const c=COURSES[course],list=[];let id=0;for(const[a,b]of c.segments){for(let z=Math.max(5,a+4);z<Math.min(b-3,c.finish-2);z+=6){list.push({id:id++,x:[0,-3,3][id%3],y:1.1,z})}}return list}
 // Default-map aliases retained for testing integrations.
 export const SEGMENTS=COURSES.sky.segments,FINISH=COURSES.sky.finish,CHECKPOINTS=COURSES.sky.checkpoints,SPINNERS=COURSES.sky.spinners,BUMPERS=COURSES.sky.bumpers;
+
+// Side-lane hazards keep the center route readable and never obstruct gaps.
+for(const [id,c] of Object.entries(COURSES)){
+  c.rhythmTraps=c.segments.filter((_,i)=>i%3===1).map(([a,b],i)=>({type:i%2?'rumble':'pulse',x:(i%2?1:-1)*(c.width-2),z:(a+b)/2,halfWidth:1.2,halfLength:1.7,phase:i*.7})).filter(o=>!c.spinners.some(s=>Math.hypot(o.x,o.z-s.z)<c.width+2)&&!c.walls.some(w=>Math.abs(o.z-w.z)<3)&&!c.bumpers.some(b=>Math.hypot(o.x-b.x,o.z-b.z)<3)&&!COURSE_ELEMENTS[id].zones.some(z=>Math.abs(o.x-z.x)<z.halfWidth+o.halfWidth&&Math.abs(o.z-z.z)<z.halfLength+o.halfLength));
+}
+export function rhythmActive(trap,time){return trap.type==='rumble'||Math.sin(time*3+trap.phase)>0;}

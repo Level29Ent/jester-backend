@@ -40,7 +40,7 @@ race requests. Authentication is needed for joining, listings and all race actio
 - The server owns movement, collisions, checkpoints, falls, coins and finish
   ranks using the same course catalog and physics as the frontend.
 - A finisher sees their results while others continue. Rematch waits for all
-  racers or the 120-second deadline. Every rematch resets state and picks another
+  racers or the 60-second deadline. Every rematch resets state and picks another
   course for all remaining clients.
 - Each request requires a valid bearer identity and a room token owned by that
   identity. Validated identity is cached at most 15 seconds (never beyond token

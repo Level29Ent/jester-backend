@@ -94,7 +94,7 @@ test('static-host fallback reads only the public config and never sends bearer t
     calls.push([String(url),init]);
     if(String(url).startsWith('/api/'))return new Response('<html>not a function</html>',{status:200});
     if(url==='/online-config.json')return Response.json({auth:{enabled:false},multiplayer:{enabled:true,url:'https://race.test'}});
-    if(String(url).endsWith('/api/health'))return Response.json({protocol:PROTOCOL,courses:Object.keys(COURSES),raceLimit:120});
+    if(String(url).endsWith('/api/health'))return Response.json({protocol:PROTOCOL,courses:Object.keys(COURSES),raceLimit:60});
     return Response.json({ok:true});
   };
   assert.deepEqual(await loadPublicConfig('auth',{fetcher}),{enabled:false});
@@ -108,7 +108,7 @@ test('online controls enable only after compatible configuration; failure leaves
   const nodes=new Map(),doc={getElementById(id){if(!nodes.has(id))nodes.set(id,{disabled:true,textContent:'',checked:true});return nodes.get(id);}};
   const scope={};await mountMultiplayer({}, {doc,scope,fetcher:async()=>Response.json({enabled:false})});
   assert.equal(scope.jesterOnline,undefined);assert.equal(doc.getElementById('online-btn').disabled,true);
-  let n=0;await mountMultiplayer({},{doc,scope,fetcher:async()=>Response.json(n++?{protocol:PROTOCOL,courses:Object.keys(COURSES),raceLimit:120}:{enabled:true,url:'https://race.test'})});
+  let n=0;await mountMultiplayer({},{doc,scope,fetcher:async()=>Response.json(n++?{protocol:PROTOCOL,courses:Object.keys(COURSES),raceLimit:60}:{enabled:true,url:'https://race.test'})});
   assert.ok(scope.jesterOnline);assert.equal(doc.getElementById('online-btn').disabled,false);assert.equal(doc.getElementById('fill-bots').checked,false);assert.equal(doc.getElementById('fill-bots').disabled,true);
 });
 

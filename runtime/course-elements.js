@@ -1,4 +1,4 @@
-import {COURSES, COURSE_ELEMENTS} from './course.js';
+import {COURSES, COURSE_ELEMENTS, rhythmActive} from './course.js';
 export {COURSE_ELEMENTS} from './course.js';
 // Rendering and physics use the same finalized layout, including clearance.
 
@@ -32,7 +32,15 @@ export function applyCourseElement(course, p, dt = 1/60, previous = p) {
 export function buildCourseElements(view, course) {
   const elements = COURSE_ELEMENTS[course];
   if (!elements) return;
+  view.rhythmLights=[];
   buildCourseScenery(view, course);
+  for(const trap of COURSES[course].rhythmTraps||[]){
+    const color=trap.type==='pulse'?'#ee5367':'#ed9c35';
+    view.mesh('round',color,trap.x,.14,-trap.z,trap.halfWidth*2,.12,trap.halfLength*2);
+    for(let i=-1;i<=1;i++)view.mesh('box','#251936',trap.x,.23,-trap.z+i*.9,trap.halfWidth*1.8,.08,.16);
+    const sign=view.label(trap.type==='pulse'?'PULSE · JUMP!':'RUMBLE · SLOW','#251936',color,2.8);sign.position.set(trap.x,3.7,-trap.z);view.courseGroup.add(sign);
+    if(trap.type==='pulse'){const light=view.mesh('sphere',color,trap.x,.55,-trap.z,.35,.35,.35);(view.rhythmLights??=[]).push({mesh:light,trap,course});}
+  }
   for (const o of elements.zones) {
     const color = o.color || (o.type === 'ice' ? '#a6f4ff' : o.type === 'slime' ? '#c5a642' : o.type === 'wind' ? '#5cd9f5' : o.type === 'spring' ? '#ff7bba' : o.force > 0 ? '#44cf88' : '#ed665f');
     view.mesh('round', color, o.x, .09, -o.z, o.halfWidth * 2, .12, o.halfLength * 2);
@@ -152,4 +160,11 @@ function buildSurfaceTrap(view, o) {
   if(o.type==='slime') for(let i=-1;i<=1;i++) {
     view.mesh('sphere',o.color||'#83b83e',o.x+i*o.halfWidth*.45,.22,-o.z+i*.7,.3,.12,.3);
   }
+}
+
+export function applyRhythmTrap(course,p,time){
+ const trap=COURSES[course].rhythmTraps?.find(o=>Math.abs(p.x-o.x)<o.halfWidth&&Math.abs(p.z-o.z)<o.halfLength&&rhythmActive(o,time));
+ if(!trap||p.y>1.05||p.vy>0||p.shield||p.dashing)return;
+ if(trap.type==='pulse'&&p.stun===0){p.stun=.22;p.vy=3;p.event++;}
+ if(trap.type==='rumble'){p.vx*=.65;p.vz*=.65;}
 }
