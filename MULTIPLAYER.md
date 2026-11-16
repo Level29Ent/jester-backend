@@ -85,3 +85,14 @@ connection. Online rewards remain disabled and cosmetic ownership is not importe
 The game repository's separate weekly leaderboard API requires its Redis-backed
 API host; it is not served by this persistent race process. This backend update
 does not configure external services or claim live account/browser verification.
+
+
+## Race polish synchronization
+
+The current runtime is polish-v5, exported from the matching frontend commit.
+It includes deterministic stuck-bot recovery inputs for shared solo/replay rules;
+network humans never receive bot recovery or extra speed. Physics geometry and
+60-second race deadlines are unchanged. Versioning prevents stale clients from
+connecting with inconsistent rank/replay rules. Existing private championships,
+votes and public matchmaking are retained. No wallet reward or persistent room
+storage is enabled by this update. Deploy both reviewed repositories together.
