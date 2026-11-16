@@ -1,19 +1,11 @@
 'use strict';
-const {createRaceServer}=require('./server.js');
-const {EnhancedRaceEngine}=require('./gameplay.cjs');
-function createEnhancedServer(options={}){
- const engine=options.engine||new EnhancedRaceEngine();
- const {server}=createRaceServer({...options,engine});
- const [handle]=server.listeners('request');server.removeAllListeners('request');
- server.on('request',(req,res)=>{
-  const route=new URL(req.url,'http://localhost').pathname;
-  if(req.method==='GET'&&['/','/health','/api/health'].includes(route)){
-   res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'});
-   return res.end(JSON.stringify({ok:true,mode:'enhanced-race',rewardsConfigured:!!engine.rewards.sender,pendingRewards:engine.rewards.jobs.size,obstacleCollisions:true,pendingRewardsSurviveRestart:false}));
-  }
-  return handle(req,res);
- });
- return {server,engine};
+// Deploy the same authoritative 20-course simulation used by the current game.
+// Legacy engines remain for reference/tests, but are not the production entry.
+async function createEnhancedServer(options={}) {
+  const {createMultiplayerServer}=await import('./runtime/server/multiplayer.js');
+  return createMultiplayerServer(options);
 }
-if(require.main===module){const {server}=createEnhancedServer();server.listen(Number(process.env.PORT)||8080,'0.0.0.0',()=>console.log('Enhanced Jester race server listening'));}
+if(require.main===module){
+  createEnhancedServer().then(({server})=>server.listen(Number(process.env.PORT)||8080,'0.0.0.0',()=>console.log('Jester Rush multiplayer listening'))).catch(()=>{console.error('Multiplayer startup failed');process.exitCode=1;});
+}
 module.exports={createEnhancedServer};
