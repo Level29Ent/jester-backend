@@ -1,3 +1,4 @@
+import {signatureCourses} from './signature-courses.js';
 export const COLORS=['#9428c5','#36bf36','#f6bc18','#e95183'];
 export const COURSES={
  sky:{name:'Skyline Shuffle',sky:'#d7eafa',track:'#aee966',side:'#843ab8',accent:'#ffc928',speed:1,width:8,finish:104,segments:[[-8,34],[38,70],[74,113]],checkpoints:[43,80],spinners:[{z:15,rate:-.8},{z:23,rate:.95},{z:57,rate:-1.1},{z:92,rate:1.2}],bumpers:[{x:2,z:28},{x:-2,z:96},{x:-4,z:13},{x:3,z:16},{x:4,z:46},{x:-3,z:50},{x:0,z:83},{x:4,z:86}],boosts:[{x:0,z:8},{x:-4,z:46},{x:3,z:81}],walls:[{z:48,rate:-1,range:4.5},{z:63,rate:1.2,range:4.5}]},
@@ -187,6 +188,8 @@ for (const [id, c] of Object.entries(COURSES)) {
   }
   c.bumpers = bumpers;
 }
+
+for(const [id,c]of Object.entries(signatureCourses())){COURSES[id]=c;COURSE_ELEMENTS[id]=c.elements;}
 
 export const COURSE_IDS = Object.freeze(Object.keys(COURSES));
 export function randomCourse(previous, random = Math.random) {

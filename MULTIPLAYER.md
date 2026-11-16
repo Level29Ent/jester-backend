@@ -96,3 +96,21 @@ network humans never receive bot recovery or extra speed. Physics geometry and
 connecting with inconsistent rank/replay rules. Existing private championships,
 votes and public matchmaking are retained. No wallet reward or persistent room
 storage is enabled by this update. Deploy both reviewed repositories together.
+
+
+## Signature-course runtime
+
+The matching frontend now has 23 courses and signature-v6 rules. This exported
+snapshot adds Clockwork Ferry moving bridges (race-clock positions and grounded
+carry), Crumble Causeway delayed per-racer floor collapse/reset, and Triple Tower
+Trials rotating sweeper gauntlets. Normal race deadlines remain 60 seconds.
+Per-racer tile contacts are part of server snapshots; one player's collapse does
+not delete another player's ground. Both clients/renderers must use this catalog.
+
+Startup health and snapshot hashes cover the exact source revision. Integration
+tests now complete a two-client three-round championship across all signature
+courses in addition to ordinary private/public lifecycle and authorization tests.
+The local ghost/rival utilities are included only because the shared simulation
+imports them; they do not expose upload endpoints or grant online wallet rewards.
+No external host/configuration or durable room storage is added by this update.
+Deploy both reviewed repositories together and perform real two-account checks.

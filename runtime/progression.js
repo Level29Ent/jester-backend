@@ -4,7 +4,7 @@ import {normalizeAppearance} from './appearance.js';
 import {normalizeSabotage} from './sabotage.js';
 
 // Bump whenever layout or movement changes invalidate personal/global times.
-export const TRACK_VERSION = 'polish-v5';
+export const TRACK_VERSION = 'signature-v6';
 export const ZERO_UPGRADES = Object.freeze({speed:0,jump:0,dash:0,magnet:0});
 export const CUP_POINTS = [15,12,10,8,7,6,5,4,3,2,1,0];
 export function validateProfile(p) {

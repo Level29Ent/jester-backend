@@ -34,3 +34,21 @@ test('departing member vote is removed and host control transfers without granti
  await assert.rejects(e.action(b,'start',{token:two.token}),/Only the host/);
  await e.action(a,'leave',{token:one.token});const room=await e.action(b,'sync',{token:two.token});assert.equal(room.host,b.id);assert.equal(room.partyCup.votes.a,undefined);assert.equal(room.partyCup.votes.b,'sky');
 });
+
+test('signature-course championship runs moving platforms, collapse tiles and tower physics for two clients',async()=>{
+ let now=0;const e=new MultiplayerEngine({now:()=>now,random:()=>0}),a={id:'sig-a'},b={id:'sig-b'};
+ const one=await e.action(a,'enter',{mode:'create',championship:true}),two=await e.action(b,'enter',{mode:'join',code:one.room.code});
+ for(const [round,course]of ['ferry','crumble','tower'].entries()){
+  await e.action(a,'vote',{token:one.token,course});let room=await e.action(a,round?'rematch':'start',{token:one.token}),release=new Map();assert.equal(room.course,course);
+  for(let i=0;i<1270&&room.phase!=='results';i++){
+   for(const [user,session]of [[a,one],[b,two]]){
+    const p=room.players.find(p=>p.id===user.id),c=COURSES[course],edge=gaps(course).some(([a,b])=>p.z>a-3.5&&p.z<b),hazard=c.spinners.some(o=>Math.abs(o.z-p.z)<4);
+    const jump=!release.get(user.id)&&p.y<1.05&&(edge||hazard);release.set(user.id,jump);
+    await e.action(user,'sync',{token:session.token,input:{x:Math.max(-1,Math.min(1,-p.x)),z:1,jump,dash:edge&&p.cd===0}});
+   }
+   now+=50;await e.tick(.05);room=await e.action(a,'sync',{token:one.token});
+  }
+  assert.equal(room.phase,'results');assert.ok(room.players.every(p=>p.rank),course+' must be finishable by both clients');assert.ok(room.time<=60);
+  if(course==='crumble')assert.ok(Object.keys(room.players[0].tileContacts).length>0);
+ }
+});

@@ -16,5 +16,5 @@ export function raceHighlights(room,p){
  if(!p.rank)messages.push('Try the safe lane or practice a checkpoint before your next race.');
  return messages;
 }
-export const REWARD_STYLES={none:{name:'Default',requires:null},halo:{name:'Clean-run halo',requires:'clean'},trail:{name:'Champion gold trail',requires:'winner'},pose:{name:'Sprinter victory pose',requires:'sprinter'}};
+export const REWARD_STYLES={none:{name:'Default',requires:null},halo:{name:'Clean-run halo',requires:'clean'},trail:{name:'Champion gold trail',requires:'winner'},pose:{name:'Sprinter victory pose',requires:'sprinter'},ferry:{name:'Clockwork cyan halo',requires:'rival-ferry'},crumble:{name:'Causeway amber trail',requires:'rival-crumble'},tower:{name:'Tower purple halo',requires:'rival-tower'}};
 export function canEquipReward(style,unlocked){return Object.hasOwn(REWARD_STYLES,style)&&(!REWARD_STYLES[style].requires||unlocked.includes(REWARD_STYLES[style].requires));}
