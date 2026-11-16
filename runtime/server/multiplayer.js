@@ -1,3 +1,4 @@
+import {COMPETITIONS} from '../competition.js';
 import {CUP_POINTS} from '../progression.js';
 import {randomBytes,createHash} from 'node:crypto';
 import {createServer} from 'node:http';
@@ -16,7 +17,7 @@ const copy=value=>JSON.parse(JSON.stringify(value));
 // One persistent process owns all rooms. Never instantiate per serverless request.
 export class MultiplayerEngine {
   constructor({now=()=>performance.now(),random=Math.random}={}){this.now=now;this.random=random;this.rooms=new Map();this.sessions=new Map();}
-  view(room){const state=room.state||{course:room.course,phase:'waiting',round:room.round,time:0,count:0,players:room.members.map((u,i)=>({...u,bot:false,loadout:{...starterLoadout},upgrades:{speed:0,jump:0,dash:0,magnet:0},coinIds:[],x:0,y:1,z:-i,rank:0}))};
+  view(room){const state=room.state||{course:room.course,competition:room.competition,phase:'waiting',round:room.round,time:0,count:0,players:room.members.map((u,i)=>({...u,bot:false,loadout:{...starterLoadout},upgrades:{speed:0,jump:0,dash:0,magnet:0},coinIds:[],x:0,y:1,z:-i,rank:0}))};
     return copy({...state,protocol:PROTOCOL,network:true,partyCup:room.championship?{round:room.cupRound,total:3,complete:room.cupRound===3&&state.phase==='results',standings:Object.entries(room.points).map(([id,points])=>({id,points,name:room.names[id]})).sort((a,b)=>b.points-a.points),votes:Object.fromEntries(room.votes)}:null,code:room.code,kind:room.kind,host:room.host,humanCount:room.members.length,raceSize:room.raceSize||room.members.length,fillBots:false,autoStart:0,
       players:state.players.map(p=>({...p,rewardStatus:'disabled'})),results:state.players.filter(p=>p.rank).sort((a,b)=>a.rank-b.rank)});}
   session(token,user){const s=this.sessions.get(token);if(!s||s.user!==user.id)throw fail('Race session expired. Rejoin from the playground.',401);s.seen=this.now();return s;}
@@ -32,7 +33,7 @@ export class MultiplayerEngine {
     if(!room){
       if(this.rooms.size>=100)throw fail('Race server is full.',503);
       let code;do{code=randomBytes(4).toString('hex').toUpperCase();}while(this.rooms.has(code));
-      room={code,kind:data.mode==='public'?'public':'private',course:randomCourse(null,this.random),round:1,members:[],host:user.id,inputs:new Map(),engine:null,state:null,clock:0,championship:data.mode==='create'&&data.championship===true,cupRound:1,points:{},names:{},votes:new Map(),scoredRound:0};this.rooms.set(code,room);
+      room={code,kind:data.mode==='public'?'public':'private',course:randomCourse(null,this.random),round:1,members:[],host:user.id,inputs:new Map(),engine:null,state:null,clock:0,competition:data.mode==='create'&&COMPETITIONS.includes(data.competition)?data.competition:null,championship:data.mode==='create'&&!COMPETITIONS.includes(data.competition)&&data.championship===true,cupRound:1,points:{},names:{},votes:new Map(),scoredRound:0};this.rooms.set(code,room);
     }
     // Online uses neutral physics/cosmetics, not editable browser wallet claims.
     room.members.push({id:user.id,name:typeof data.name==='string'?data.name.replace(/[\u0000-\u001f\u007f]/g,'').trim().slice(0,18)||'Racer':'Racer',loadout:{...starterLoadout}});
@@ -43,10 +44,11 @@ export class MultiplayerEngine {
   async begin(room){
     if(room.members.length<2)throw fail('At least two real players are required.');
     if(room.starting)throw fail('Room is starting.');room.starting=true;
+    if(room.competition==='survival')room.course='sky';
     room.raceSize=room.members.length;room.clock=0;room.inputs.clear();
     room.engine=createPracticeClient({now:()=>room.clock,storage:{getItem(){},setItem(){}},random:this.random,
       network:{players:room.members,input:id=>room.inputs.get(id)?.value||{}}});
-    await room.engine.request('configure',{autoRotate:false,standardized:true});
+    await room.engine.request('configure',{autoRotate:false,standardized:true,runMode:room.competition||'race'});
     const result=await room.engine.request('enter',{mode:'quick',course:room.course});room.state=result.room;room.state.round=room.round;room.starting=false;
   }
   async action(user,action,data={}){

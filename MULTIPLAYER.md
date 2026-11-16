@@ -114,3 +114,23 @@ The local ghost/rival utilities are included only because the shared simulation
 imports them; they do not expose upload endpoints or grant online wallet rewards.
 No external host/configuration or durable room storage is added by this update.
 Deploy both reviewed repositories together and perform real two-account checks.
+
+
+## Alternative private-room competitions
+
+Protocol v3 / competition-v7 adds creator-selected elimination, survival and team
+rules. Guests join the room's rules; join/sync packets cannot alter mode, rank or
+team. Public matchmaking stays a normal race. Alternative modes override the
+three-round championship option rather than silently mixing their score rules.
+
+Elimination removes the trailing unfinished player at 15s then every ten seconds.
+Survival uses a shrinking 8m-to-4m circle and accelerating sweeper, with permanent
+fall elimination (no checkpoint respawn), last-standing win or survivors tying
+at 60s. Team races alternate Gold/Violet roster slots and sum finished-place
+points; DNFs score zero. All modes keep neutral upgrades/items and their server
+results reset on rematch. Host/session authorization and presence expiry remain.
+
+These rounds do not pay wallet coins or server career XP. The game frontend's
+local career/title/course-map/cosmetic progression is not an online entitlement.
+Persistent rooms still need one shared-owner Node process and do not survive
+restarts. Deploy the exact matched frontend/runtime together before live tests.

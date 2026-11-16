@@ -6,7 +6,7 @@ export const RIVAL_CHALLENGES=[
  {id:'tower-duel',course:'tower',bot:7,reward:'tower',name:'Triple Tower duel'}
 ];
 export function rivalBeaten(room,challenge){const p=room.players[0],r=room.players[challenge.bot];return !!p?.rank&&!!r?.bot&&(!r.rank||p.rank<r.rank)&&room.course===challenge.course&&!room.sabotaged;}
-export function podiumPlayers(room){return room.players.filter(p=>Number.isInteger(p.rank)&&p.rank>0&&p.rank<=3).sort((a,b)=>a.rank-b.rank);}
+export function podiumPlayers(room){if(room.competition)return [];return room.players.filter(p=>Number.isInteger(p.rank)&&p.rank>0&&p.rank<=3).sort((a,b)=>a.rank-b.rank);}
 export function validateGhost(text){
  if(typeof text!=='string'||text.length>300000)throw Error('Choose a ghost JSON smaller than 300 KB.');
  let g;try{g=JSON.parse(text);}catch{throw Error('Invalid ghost JSON.');}

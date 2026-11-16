@@ -4,4 +4,4 @@ import {TRACK_VERSION} from './progression.js';
 // servers never masquerade as compatible with this renderer.
 let hash=2166136261;
 for(const char of JSON.stringify(COURSES)){hash^=char.charCodeAt(0);hash=Math.imul(hash,16777619);}
-export const NETWORK_PROTOCOL=`jester-network-2:${TRACK_VERSION}:${(hash>>>0).toString(16)}`;
+export const NETWORK_PROTOCOL=`jester-network-3:${TRACK_VERSION}:${(hash>>>0).toString(16)}`;
