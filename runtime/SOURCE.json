@@ -1,11 +1,12 @@
 {
   "repository": "Level29Ent/Jester-rush",
-  "commit": "268a216f9a8440df95afc2162f3ec398d74bf3bb",
+  "commit": "b23b13286b30c8f37978d55f6b03a1c83ea2c53a",
   "hashes": {
     "replay-features.js": "3ccf186473d66681e9f467a2ae166ef2e69932646ddaba0cf676c52f9f9a1a2e",
-    "practice.js": "52215e6bc74e0bce7fec03af9697d576a15cdd720eac209e4233e0efb2d2c144",
+    "race-polish.js": "a7a3cd66ae008f2c973b3f37ed08e7aa78ab53b41191ca7e333250a67f144a94",
+    "practice.js": "884d9af57b661e0f9309772f635082ec9b94d9937ecb420078541dfad3c4bcf6",
     "movement.js": "dfa5a1a2eb8c1a23fc5e30ea010cdf3a566ab0715f06436fbdf2965931c09f9f",
-    "progression.js": "3f829364dc1dfeaa2e0eecaf3e742a4cdba9ac480f651652c32cc74dce350055",
+    "progression.js": "5e80430765534888e27aadb1a2bff060d36d8611ed53b1b7c99f501875517022",
     "course.js": "1f8f5a79362e70a15f969bb6dc086774f5601eefb166d5870cc3a6400f5a889e",
     "course-elements.js": "f754094760e4b76f668c4d60cbb91ce295d08db6a3b05ddc52e3f1ae1f794b84",
     "catalog.js": "a6064c77333e42376b9b9d65b5bc3aa826b608a3632ab5e7d6d7c61815f98228",

@@ -1,3 +1,4 @@
+import {recoverBot} from './race-polish.js';
 import {PERSONALITIES,weeklyChallenge} from './replay-features.js';
 import {steerRacer} from './movement.js';
 import {TRACK_VERSION, ZERO_UPGRADES, CUP_POINTS, exportBackup, importBackup, dailyChallenge, dailyComplete, medalFor, recordKey, ghostAt, cupStandings} from './progression.js';
@@ -25,7 +26,7 @@ export function restartAfterFall(p, course) {
   p.vx = p.vy = p.vz = p.cd = p.boost = p.dashing = 0;
   p.jumpBuffer = p.coyote = 0;
   p.controlVx=p.controlVz=0;
-  p.activeRoute=null;
+  p.activeRoute=null;p.recovery=null;
   p.falls++; p.event++; p.stun = .15;
   // Keep coinIds: restarting must not allow farming the same pickups twice.
 }
@@ -145,7 +146,8 @@ export function createPracticeClient({storage, now = () => performance.now(), on
     if (player.rank === 1) profile.stats.wins++;
     save();
   }
-  function botInput(p, index) {
+  function botInput(p, index, dt) {
+    const recovery=recoverBot(p,dt,COURSES[room.course].width);if(recovery)return recovery;
     const gap = COURSE_GAPS[room.course].some(([edge, end]) => p.z > edge - 4 && p.z < end);
     const course = COURSES[room.course];
     const hazard = course.spinners.some(o => Math.abs(o.z - p.z) < 4) ||
@@ -244,7 +246,7 @@ export function createPracticeClient({storage, now = () => performance.now(), on
       const player=room.players[0], oldCP=player.cp;
       room.time = Math.min(room.training?600:RACE_LIMIT,room.time+dt);
       room.traps = room.traps.filter(t=>t.expires>room.time);
-      room.players.forEach((p, index) => move(p, network ? network.input(p.id) : index ? botInput(p, index) : input, dt));
+      room.players.forEach((p, index) => move(p, network ? network.input(p.id) : index ? botInput(p, index, dt) : input, dt));
       const order=[...room.players].sort((a,b)=>a.rank&&b.rank?a.rank-b.rank:a.rank?-1:b.rank?1:b.z-a.z);
       order.forEach((p,i)=>{p.bestPosition=Math.max(p.bestPosition||1,i+1);});
       if(room.phase==='racing'){
