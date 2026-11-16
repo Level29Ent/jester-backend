@@ -1,3 +1,7 @@
+> **Legacy prototype documentation:** the current `npm start` runs the compatible
+> shared runtime described in [MULTIPLAYER.md](./MULTIPLAYER.md). Online coins are
+> race score only; no wallet settlement is enabled by the current entry point.
+
 # Rewards and gameplay deployment
 
 Start command: `npm start` (runs `node game-server.cjs`).

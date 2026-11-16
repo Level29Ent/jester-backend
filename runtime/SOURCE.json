@@ -1,0 +1,21 @@
+{
+  "repository": "Level29Ent/Jester-rush",
+  "commit": "029624e4831a68cf67fc974ee2fb1219fe8c3e57",
+  "hashes": {
+    "practice.js": "31215d5b1d560cf818bf13ca79344d4a6ad84730a0eede850e2d91e1c7fa9997",
+    "movement.js": "dfa5a1a2eb8c1a23fc5e30ea010cdf3a566ab0715f06436fbdf2965931c09f9f",
+    "progression.js": "4577103fb14ba23b4bf0516b42ee6c7b884de9ddf9b72f0e4e4bd5b522eb03dd",
+    "course.js": "dd8ffbbdbd84e209c1f3a50b79395a7fdef07c3935027b0bcefb461a8abeffba",
+    "course-elements.js": "43af84b0a103112e1087b6e891e702cfc060d5ed36b8f5cecb2caa8d4707aad5",
+    "catalog.js": "a6064c77333e42376b9b9d65b5bc3aa826b608a3632ab5e7d6d7c61815f98228",
+    "appearance.js": "8fa3306d534bf5ab7adda55a673a2b7e55c1ae516f60b61c0f485f802ed7ac9d",
+    "sabotage.js": "b2d8d98ebec6e9e377c2cad6dcd18dd9996c805d4bd3a3a5e692ebbb10354e06",
+    "rivals.js": "f5fbb1c7c81d0e54daf0b01bca238b14f3dc372972beee05dc13a3b13e0a3ed8",
+    "server/multiplayer.js": "7faf0b2d0b261fd473a5d64bb7e3920e6e99a18f48ead2502044a33cfc9e69d8",
+    "multiplayer-protocol.js": "f2b04f698220b43c24fa2c77a06a5c3a67106e1540662b9b477a4572a0cf0de6",
+    "public-config.js": "f5a0750b93ebd01d95d9a4b3065f53e5f30bf7954b06a9933abae66a4872e88e",
+    "multiplayer-client.js": "7043fed735f9648d02eabd94104ccc9dab3cf5072de647f58232aed0e472b12a",
+    "multiplayer.test.mjs": "5ed0a029d5bd11d9c5737f708159cd21f800a22c9054d3e654b6ddb7a8a2b154",
+    "api/multiplayer-config.js": "c671662275a1c8913a1ce9ec9ef3af05a0c405dd2322c788679209d0d6bce71c"
+  }
+}
